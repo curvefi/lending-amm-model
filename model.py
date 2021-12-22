@@ -7,11 +7,15 @@ from math import sqrt
 T = 600  # s
 
 
-def load_prices(f):
+def load_prices(f, add_reverse=True):
     with gzip.open(f, "r") as f:
         data = json.load(f)
     # timestamp, OHLC, vol
-    return [[int(d[0])] + [float(x) for x in d[1:6]] for d in data]
+    data = [[int(d[0])] + [float(x) for x in d[1:6]] for d in data]
+    if add_reverse:
+        t0 = data[-1][0]
+        data += [[t0 + (t0 - d[0])] + d[1:] for d in data[::-1]]
+    return data
 
 
 class LendingAMM:
@@ -140,13 +144,18 @@ class LendingAMM:
         self.price = p
 
 
-def trader():
-    price_data = load_prices('data/ethusdt-1m.json.gz')
-    price_data = price_data[int(0.6 * len(price_data)):]
+def trader(price_data, position, size, log=True, verbose=False):
+    """
+    position: 0..1
+    size: 0..1
+    """
+    price_data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
     ema = price_data[0][1]
     ema_t = price_data[0][0]
     amm = LendingAMM(20, 100, ema, fee=0.01)  # A=10, 100 ETH, 400 USD "liquidation" price
     initial_y0 = amm.y0
+
+    losses = []
 
     for t, o, high, low, c, vol in price_data:
         ema_mul = 2 ** (- (t - ema_t) / (1000 * T))
@@ -161,8 +170,17 @@ def trader():
             amm.trade_to(low)
         d = datetime.fromtimestamp(t//1000).strftime("%Y/%m/%d %H:%M")
         loss = amm.y0 / initial_y0 * 100
-        print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.price:.2f}\t{amm.x:.1f}\t{amm.y:.1f}\t\t{loss:.2f}%')
+        if log:
+            print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.price:.2f}\t{amm.x:.1f}\t{amm.y:.1f}\t\t{loss:.2f}%')
+        if verbose:
+            losses.append([t//1000, loss])
+
+    if verbose:
+        return loss * 1000 / (price_data[-1][0] - price_data[0][0]), losses
+    else:
+        return loss * 1000 / (price_data[-1][0] - price_data[0][0])
 
 
 if __name__ == '__main__':
-    trader()
+    price_data = load_prices('data/ethusdt-1m.json.gz')
+    print(trader(price_data, 0.5, 0.6, log=False, verbose=False))
