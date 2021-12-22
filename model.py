@@ -1,5 +1,7 @@
 import json
 import gzip
+import random
+from multiprocessing import Pool, cpu_count
 from datetime import datetime
 from math import sqrt
 
@@ -144,20 +146,23 @@ class LendingAMM:
         self.price = p
 
 
-def trader(price_data, position, size, log=True, verbose=False):
+price_data = load_prices('data/ethusdt-1m.json.gz')
+
+
+def trader(A, fee, position, size, log=False, verbose=False):
     """
     position: 0..1
     size: 0..1
     """
-    price_data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
-    ema = price_data[0][1]
-    ema_t = price_data[0][0]
-    amm = LendingAMM(20, 100, ema, fee=0.01)  # A=10, 100 ETH, 400 USD "liquidation" price
+    data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
+    ema = data[0][1]
+    ema_t = data[0][0]
+    amm = LendingAMM(A, 100, ema, fee=fee)  # A=10, 100 ETH, 400 USD "liquidation" price
     initial_y0 = amm.y0
 
     losses = []
 
-    for t, o, high, low, c, vol in price_data:
+    for t, o, high, low, c, vol in data:
         ema_mul = 2 ** (- (t - ema_t) / (1000 * T))
         ema = ema * ema_mul + (low + high) / 2 * (1 - ema_mul)
         ema_t = t
@@ -173,14 +178,41 @@ def trader(price_data, position, size, log=True, verbose=False):
         if log:
             print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.price:.2f}\t{amm.x:.1f}\t{amm.y:.1f}\t\t{loss:.2f}%')
         if verbose:
-            losses.append([t//1000, loss])
+            losses.append([t//1000, loss / 100])
+
+    loss = 1 - amm.y0 / initial_y0
 
     if verbose:
-        return loss * 1000 / (price_data[-1][0] - price_data[0][0]), losses
+        return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
     else:
-        return loss * 1000 / (price_data[-1][0] - price_data[0][0])
+        return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+
+
+def f(x):
+    A, fee, pos, size = x
+    return trader(A, fee, pos, size, verbose=False, log=False)
+
+
+pool = Pool(cpu_count())
+
+
+def get_loss_rate(A, fee, samples=200):
+    dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
+    inputs = [(A, fee, random.random(), (1 - dt) * random.random()**2 + dt) for _ in range(samples)]
+    result = pool.map(f, inputs)
+    return max(result) * 86400**0.5  # loss * sqrt(days)
 
 
 if __name__ == '__main__':
-    price_data = load_prices('data/ethusdt-1m.json.gz')
-    print(trader(price_data, 0.5, 0.6, log=False, verbose=False))
+    import pylab
+    import numpy as np
+
+    A = np.logspace(np.log10(2), np.log10(40), 20)
+    fee = 0.01
+    losses = []
+    for a in A:
+        losses.append(get_loss_rate(a, fee))
+        print(A, losses[-1])
+
+    pylab.plot(A, losses)
+    pylab.show()
