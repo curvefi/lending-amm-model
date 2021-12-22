@@ -147,6 +147,7 @@ class LendingAMM:
 
 
 price_data = load_prices('data/ethusdt-1m.json.gz')
+price_data = price_data[len(price_data) // 2:]
 
 
 def trader(A, fee, position, size, log=False, verbose=False):
@@ -212,7 +213,7 @@ if __name__ == '__main__':
     losses = []
     for a in A:
         losses.append(get_loss_rate(a, fee))
-        print(A, losses[-1])
+        print(a, losses[-1])
 
     pylab.plot(A, losses)
     pylab.show()
