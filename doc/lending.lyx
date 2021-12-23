@@ -1,0 +1,197 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Lending without liquidations
+\end_layout
+
+\begin_layout Author
+Michael Egorov, Curve.fi
+\end_layout
+
+\begin_layout Standard
+Typically, when USD (as an example) is borrowed against some unstable collateral
+ (say, ETH), if ETH is going down and its value becomes dangerously close
+ to the USD value of the loan, the collateral is going to be liquidated.
+ This creates negative effects for both borrowers and market stability.
+ Here I devise a system which doesn't have explicit liquidations.
+\end_layout
+
+\begin_layout Standard
+The idea is that when price crosses some threshold liquidation price, collateral
+ (ETH) starts being slowly converted to the currency of the loan (USD) as
+ the price goes down, but back to ETH if its price goes up, therefore if
+ ETH price significantly drops, ETH collateral is already converted to USD
+ (which can be used to repay the loan), but if ETH goes back up - USD gets
+ converted back to ETH.
+ This can be done with a special Automatic Market-Maker (AMM).
+ The caveat is though that typical AMMs (like Curve, Uniswap) have more
+ USD when the price is high and more ETH when the (ETH) price is low, e.g.
+ they buy more asset as its price drops, and we need the opposite behavior.
+ Here we propose an AMM which does just that.
+\end_layout
+
+\begin_layout Standard
+It is probably impossible to create an AMM which does that and requires
+ no external inputs, so we have an external asset (ETH) price from an external
+ oracle (or moving average oracle from an AMM like Curve).
+ Let's call this oracle price 
+\begin_inset Formula $p_{o}$
+\end_inset
+
+.
+ Current market price can be called 
+\begin_inset Formula $p$
+\end_inset
+
+.
+ Let's also call the critical price at which one would start liquidating
+ if it was a model with liquidations 
+\begin_inset Formula $p_{\uparrow}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+For AMM, we choose an amplified liuidity, similar to what Uniswap3 uses
+ for its ticks, also in a similar fashion (by having virtual balances).
+ However those balances are allowed to depend on 
+\begin_inset Formula $p_{o}$
+\end_inset
+
+.
+ Constant-product invariant for that looks like:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\text{\left(f(p_{o})+x\right)\left(g(p_{o})+y\right)}=I.
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's find out, what are good functions 
+\begin_inset Formula $f$
+\end_inset
+
+ and 
+\begin_inset Formula $g$
+\end_inset
+
+.
+ We take as given that when 
+\begin_inset Formula $p=p_{o}=p_{\uparrow}$
+\end_inset
+
+, everything is still in ETH: 
+\begin_inset Formula $y=y_{0}$
+\end_inset
+
+, 
+\begin_inset Formula $x=0$
+\end_inset
+
+.
+ If, however, price stabilizes at some lower value 
+\begin_inset Formula $p_{\downarrow}$
+\end_inset
+
+or below, e.
+ g.
+ if 
+\begin_inset Formula $p=p_{o}=p_{\downarrow}$
+\end_inset
+
+: 
+\begin_inset Formula $y=0$
+\end_inset
+
+, 
+\begin_inset Formula $x=x_{0}$
+\end_inset
+
+ (everything is converted to USD).
+\end_layout
+
+\end_body
+\end_document
