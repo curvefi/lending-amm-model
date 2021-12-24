@@ -7,7 +7,7 @@ from math import sqrt
 
 
 MIN_LOAN_DURATION = 1  # day
-MAX_LOAN_DURATION = 14  # days
+MAX_LOAN_DURATION = 3  # days
 EXT_FEE = 0.0005
 SAMPLES = 4000
 T = 600  # s
@@ -141,10 +141,10 @@ class LendingAMM:
         # else:
         #     self.x += (x_start - x_end) * self.fee
         # self.gulp()  # -> recalcs y0
-        if p_end == p_up:
+        if p_end >= p_up:
             self.y = 0
             self.x = max(self.A * self.y0 * sqrt(self.p_up * p_end) - self.f(), 0)
-        elif p_end == p_down:
+        elif p_end <= p_down:
             self.x = 0
             self.y = max(self.A * self.y0 * sqrt(self.p_up / p_end) - self.g(), 0)
         else:
