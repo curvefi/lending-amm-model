@@ -4,12 +4,12 @@ if __name__ == '__main__':
     import pylab
     import numpy as np
 
-    A = 22
-    fees = np.logspace(np.log10(0.00005), np.log10(0.01), 20)
+    A = 35
+    fees = np.logspace(np.log10(0.0001), np.log10(0.02), 100)
     losses = []
     for fee in fees:
         losses.append(get_loss_rate(A, fee))
         print(fee, losses[-1])
 
-    pylab.plot(fees, losses)
+    pylab.semilogx(fees, losses)
     pylab.show()

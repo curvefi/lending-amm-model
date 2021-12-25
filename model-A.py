@@ -4,8 +4,8 @@ if __name__ == '__main__':
     import pylab
     import numpy as np
 
-    A = np.logspace(np.log10(2), np.log10(40), 20)
-    fee = 0.003
+    A = np.logspace(np.log10(2), np.log10(200), 100)
+    fee = 0.0005
     losses = []
     for a in A:
         losses.append(get_loss_rate(a, fee))
