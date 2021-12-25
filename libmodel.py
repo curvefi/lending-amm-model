@@ -41,12 +41,11 @@ class LendingAMM:
         self.p_oracle = p
 
         if self.x == 0:
-            self.y0 = self.y
+            self.y0 = (p / self.p_up)**(3/2) * self.y
             return
 
         if self.y == 0:
-            y0 = self.x / self.p_up * sqrt(self.A / (self.A - 1))
-            self.y0 = y0
+            self.y0 = sqrt(self.p_up) / p**(3/2) * (self.A - 1) / self.A * self.x
             return
 
         # Gulp
@@ -172,10 +171,10 @@ def trader(A, fee, position, size, log=False, verbose=False):
     losses = []
 
     for t, o, high, low, c, vol in data:
+        amm.set_oracle(ema)
         ema_mul = 2 ** (- (t - ema_t) / (1000 * T))
         ema = ema * ema_mul + (low + high) / 2 * (1 - ema_mul)
         ema_t = t
-        amm.set_oracle(ema)
         high *= (1 - amm.fee - EXT_FEE)
         low *= (1 + amm.fee + EXT_FEE)
         if high > amm.price:
@@ -211,7 +210,7 @@ def get_loss_rate(A, fee, samples=SAMPLES):
     result = pool.map(f, inputs)
     # return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
     # return max(result) * 86400**0.5  # loss * sqrt(days)
-    return sum(sorted(result)[::-1][:samples//20]) / (samples / 20) * 86400**.5  # top 10 losses
+    return sum(sorted(result)[::-1][:samples//20]) / (samples / 20) * 86400**.5  # top 5% losses
     # return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
 
 
