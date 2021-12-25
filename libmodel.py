@@ -7,9 +7,9 @@ from math import sqrt
 
 
 MIN_LOAN_DURATION = 1  # day
-MAX_LOAN_DURATION = 3  # days
+MAX_LOAN_DURATION = 30  # days
 EXT_FEE = 0.0005
-SAMPLES = 4000
+SAMPLES = 400
 T = 600  # s
 
 
@@ -157,24 +157,32 @@ class LendingAMM:
 price_data = load_prices('data/ethusdt-1m.json.gz')
 
 
-def trader(A, fee, position, size, log=False, verbose=False):
+def trader(A, fee, Texp, position, size, log=False, verbose=False):
     """
     position: 0..1
     size: 0..1
     """
-    data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
+    i0 = int(position * len(price_data) / 2)
+    i1 = max(i0 - 24*2*60, 0)
+    data = price_data[i1:int((position + size) * len(price_data) / 2)]
+    emas = []
     ema = data[0][1]
     ema_t = data[0][0]
+    for t, _, high, low, _, _ in data:
+        ema_mul = 2 ** (- (t - ema_t) / (1000 * Texp))
+        ema = ema * ema_mul + (low + high) / 2 * (1 - ema_mul)
+        ema_t = t
+        emas.append(ema)
+    emas = emas[i0 - i1:]
+
+    data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
     amm = LendingAMM(A, 100, ema, fee=fee)  # A=10, 100 ETH, 400 USD "liquidation" price
     initial_y0 = amm.y0
 
     losses = []
 
-    for t, o, high, low, c, vol in data:
+    for (t, o, high, low, c, vol), ema in zip(data, emas):
         amm.set_oracle(ema)
-        ema_mul = 2 ** (- (t - ema_t) / (1000 * T))
-        ema = ema * ema_mul + (low + high) / 2 * (1 - ema_mul)
-        ema_t = t
         high *= (1 - amm.fee - EXT_FEE)
         low *= (1 + amm.fee + EXT_FEE)
         if high > amm.price:
@@ -197,21 +205,25 @@ def trader(A, fee, position, size, log=False, verbose=False):
 
 
 def f(x):
-    A, fee, pos, size = x
-    return trader(A, fee, pos, size, verbose=False, log=False)
+    A, fee, Texp, pos, size = x
+    return trader(A, fee, Texp, pos, size, verbose=False, log=False)
 
 
 pool = Pool(cpu_count())
 
 
-def get_loss_rate(A, fee, samples=SAMPLES):
+def get_loss_rate(A, fee, Texp=T, measure='topmax', samples=SAMPLES):
     dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
-    inputs = [(A, fee, random.random(), (MAX_LOAN_DURATION-MIN_LOAN_DURATION) * dt * random.random()**2 + MIN_LOAN_DURATION*dt) for _ in range(samples)]
+    inputs = [(A, fee, Texp, random.random(), (MAX_LOAN_DURATION-MIN_LOAN_DURATION) * dt * random.random()**2 + MIN_LOAN_DURATION*dt) for _ in range(samples)]
     result = pool.map(f, inputs)
-    # return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
-    # return max(result) * 86400**0.5  # loss * sqrt(days)
-    return sum(sorted(result)[::-1][:samples//20]) / (samples / 20) * 86400**.5  # top 5% losses
-    # return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
+    if measure == "avg":
+        return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
+    if measure == "max":
+        return max(result) * 86400**0.5  # loss * sqrt(days)
+    if measure == "topmax":
+        return sum(sorted(result)[::-1][:samples//20]) / (samples / 20) * 86400**.5  # top 5% losses
+    if measure == "sqavg":
+        return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
 
 
 if __name__ == '__main__':

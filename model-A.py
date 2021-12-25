@@ -5,10 +5,10 @@ if __name__ == '__main__':
     import numpy as np
 
     A = np.logspace(np.log10(2), np.log10(200), 100)
-    fee = 0.0005
+    fee = 0.003  # 0.0005?
     losses = []
     for a in A:
-        losses.append(get_loss_rate(a, fee))
+        losses.append(get_loss_rate(a, fee, measure='avg'))
         print(a, losses[-1])
 
     pylab.plot(A, losses)
