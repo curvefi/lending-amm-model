@@ -29,7 +29,6 @@ class LendingAMM:
         self.A = A
         self.y0 = float(crypto_amount)
         self.p_up = float(upper_price)  # p_up corresponds to just initial upper price...
-        self.p_down = float(upper_price) * (A - 1) / A
         self.p_oracle = self.p_up
         self.y = self.y0
         self.x = 0
@@ -153,6 +152,26 @@ class LendingAMM:
 
         self.price = p
 
+    def adiabatic_y(self):
+        mul = 1 + 1e-5
+        if self.x == 0:
+            return self.y
+        p_down = self.p_up * (self.A - 1) / self.A
+        if self.p_oracle < p_down:
+            if self.y == 0:
+                self.set_oracle(p_down)
+        self.price = self.current_price()
+
+        # Slowly trade to p_oracle and change p_oracle
+        # State of the class will be not corresponding to reality after this
+        while self.x > 0:
+            p = self.p_oracle
+            self.trade_to(p)
+            p *= mul
+            self.set_oracle(p)
+
+        return self.y
+
 
 price_data = load_prices('data/ethusdt-1m.json.gz')
 
@@ -196,7 +215,8 @@ def trader(A, fee, Texp, position, size, log=False, verbose=False):
         if verbose:
             losses.append([t//1000, loss / 100])
 
-    loss = 1 - amm.y0 / initial_y0
+    # loss = 1 - amm.y0 / initial_y0
+    loss = 1 - amm.adiabatic_y() / initial_y0
 
     if verbose:
         return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
