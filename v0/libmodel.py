@@ -152,6 +152,7 @@ class LendingAMM:
 
         self.price = p
 
+    # Max amount of y (collateral) after trades
     def adiabatic_y(self):
         mul = 1 + 1e-5
         if self.x == 0:
@@ -172,11 +173,40 @@ class LendingAMM:
 
         return self.y
 
+    # Min amount of x (stablecoin) after trades
+    def adiabatic_x(self):
+        _x = self.x
+        _y = self.y
+        _po = self.p_oracle
+        _p = self.price
+        mul = 1 - 1e-4
+        if self.y == 0:
+            return self.x
+        if self.p_oracle > self.p_up:
+            if self.y == 0:
+                self.set_oracle(self.p_up)
+        self.price = self.current_price()
+
+        # Slowly trade to p_oracle and change p_oracle
+        # State of the class will be not corresponding to reality after this
+        while self.y > 0:
+            p = self.p_oracle
+            self.trade_to(p)
+            p *= mul
+            self.set_oracle(p)
+
+        x_result = self.x
+        self.x = _x
+        self.y = _y
+        self.p_oracle = _po
+        self.price = _p
+        return x_result
+
 
 price_data = load_prices('data/ethusdt-1m.json.gz')
 
 
-def trader(A, fee, Texp, position, size, log=False, verbose=False):
+def trader(A, fee, Texp, position, size, log=False, verbose=False, loss_style='y'):
     """
     position: 0..1
     size: 0..1
@@ -216,34 +246,46 @@ def trader(A, fee, Texp, position, size, log=False, verbose=False):
             losses.append([t//1000, loss / 100])
 
     # loss = 1 - amm.y0 / initial_y0
-    loss = 1 - amm.adiabatic_y() / initial_y0
+    if loss_style == 'y':
+        loss = 1 - amm.adiabatic_y() / initial_y0
 
-    if verbose:
-        return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
-    else:
-        return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+        if verbose:
+            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
+        else:
+            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+
+    if loss_style == 'x':
+        return 1 - amm.adiabatic_x() / (initial_y0 * amm.p_up)
 
 
 def f(x):
-    A, fee, Texp, pos, size = x
-    return trader(A, fee, Texp, pos, size, verbose=False, log=False)
+    A, fee, Texp, pos, size, loss_style = x
+    return trader(A, fee, Texp, pos, size, verbose=False, log=False, loss_style=loss_style)
 
 
 pool = Pool(cpu_count())
 
 
-def get_loss_rate(A, fee, Texp=T, measure='topmax', samples=SAMPLES):
+def get_loss_rate(A, fee, Texp=T, measure='topmax', samples=SAMPLES,
+                  max_loan_duration=MAX_LOAN_DURATION,
+                  min_loan_duration=MIN_LOAN_DURATION):
     dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
-    inputs = [(A, fee, Texp, random.random(), (MAX_LOAN_DURATION-MIN_LOAN_DURATION) * dt * random.random()**2 + MIN_LOAN_DURATION*dt) for _ in range(samples)]
+    ls = 'x' if measure in ('xavg', 'xtopmax') else 'y'
+    inputs = [(A, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
     result = pool.map(f, inputs)
     if measure == "avg":
         return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
     if measure == "max":
         return max(result) * 86400**0.5  # loss * sqrt(days)
     if measure == "topmax":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples / 20) * 86400**.5  # top 5% losses
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**.5  # top 5% losses
     if measure == "sqavg":
         return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
+    if measure == "xavg":
+        return sum(result) / samples
+    if measure == "xtopmax":
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
+    raise Exception("Incorrect measure")
 
 
 if __name__ == '__main__':
