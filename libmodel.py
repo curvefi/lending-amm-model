@@ -78,3 +78,30 @@ class LendingAMM:
             ((p_top/p_o)**3 * (A - 1)**2 * x**2 + p_o**3/p_top * A**2 * y**2 +
              2 * p_top * A*(A-1) * x*y + 4 * x*y * p_top * A) ** 0.5
         ) / (2 * p_top * A)
+
+    def get_f(self, y0=None):
+        if y0 is None:
+            y0 = self.get_y0()
+        p_top = self.p_top(self.active_band)
+        p_oracle = self.p_oracle
+        return y0 * p_oracle**1.5 / p_top**0.5 * self.A
+
+    def get_g(self, y0=None):
+        if y0 is None:
+            y0 = self.get_y0()
+        p_top = self.p_top(self.active_band)
+        p_oracle = self.p_oracle
+        return y0 * p_top**1.5 / p_oracle**1.5 * (self.A - 1)
+
+    def get_p(self, y0=None):
+        if y0 is None:
+            y0 = self.get_y0()
+        x = self.bands_x[self.active_band]
+        y = self.bands_y[self.active_band]
+        return (self.get_f(y0) + x) / (self.get_g(y0) + y)
+
+    def trade_to_price(self, price):
+        """
+        Not the method to be present in real smart contract, for simulations only
+        """
+        pass

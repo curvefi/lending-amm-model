@@ -55,3 +55,31 @@ def test_y0(n, x, y, p_base, A):
     assert y0 * ERROR >= y
     assert y0 / ERROR <= y + x / p_down
     assert y0 * ERROR >= y + x / p_up
+
+
+@given(
+    n=st.integers(-10, 10),
+    x=st.floats(0, 1e6),
+    y=st.floats(0, 1e6),
+    p_base=st.floats(0.1, 10000),
+    p_oracle=st.floats(0.1, 10000),
+    A=st.floats(2, 300)
+)
+def test_current_price(n, x, y, p_base, p_oracle, A):
+    amm = LendingAMM(p_base, A)
+    amm.active_band = n
+    amm.p_oracle = p_oracle
+
+    p_up = amm.p_up(n)
+    p_down = amm.p_down(n)
+
+    amm.bands_x[n] = x
+    amm.bands_y[n] = y
+
+    if x == 0 and y == 0:
+        return
+
+    p = amm.get_p()
+
+    assert p / ERROR <= p_up
+    assert p * ERROR >= p_down
