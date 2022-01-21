@@ -104,19 +104,27 @@ class LendingAMM:
         """
         Not the method to be present in real smart contract, for simulations only
         """
-        current_price = self.get_p()
-        if price > current_price:
-            bstep = 1  # going up: sell
-        elif price < current_price:
-            bstep = -1  # going down: buy
+        if self.bands_x[self.active_band] == 0 and self.bands_y[self.active_band] == 0:
+            if price > self.p_up(self.active_band):
+                bstep = 1
+            elif price < self.p_down(self.active_band):
+                bstep = -1
+            else:
+                return 0, 0
+
         else:
-            return
+            current_price = self.get_p()
+            if price > current_price:
+                bstep = 1  # going up: sell
+            elif price < current_price:
+                bstep = -1  # going down: buy
+            else:
+                return
 
         dx = 0
         dy = 0
 
         while True:
-            # XXX handle bands with (0, 0)
             n = self.active_band
             y0 = self.get_y0()
             g = self.get_g(y0)
@@ -131,6 +139,7 @@ class LendingAMM:
                 if price >= self.p_down(n) and price <= self.p_up(n):
                     break
                 self.active_band += bstep
+                continue
 
             if bstep == 1:
                 # reduce y, increase x, go up
@@ -157,10 +166,13 @@ class LendingAMM:
 
                 else:
                     self.bands_x[n] = 0
-                    self.bandx_y[n] = Inv / f - g
+                    self.bands_y[n] = Inv / f - g
                     self.active_band -= 1
 
             dx += self.bands_x[n] - x
             dy += self.bands_y[n] - y
+
+            if abs(n) > 1000:
+                raise Exception("We should not be here ever")
 
         return dx, dy

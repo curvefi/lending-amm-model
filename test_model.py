@@ -83,3 +83,30 @@ def test_current_price(n, x, y, p_base, p_oracle, A):
 
     assert p / ERROR <= p_up
     assert p * ERROR >= p_down
+
+
+@given(
+    n=st.integers(-10, 10),
+    p_base=st.floats(0.1, 10000),
+    p_oracle=st.floats(0.1, 10000),
+    A=st.floats(2, 300),
+    p_target=st.floats(0.1, 10000),
+    from_n=st.integers(-10, 10),
+    to_n=st.integers(-10, 10),
+    x=st.floats(0, 1e6),
+    y=st.floats(0, 1e6),
+)
+def test_trade_in_band(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
+    amm = LendingAMM(p_base, A)
+    amm.active_band = n
+    amm.p_oracle = p_oracle
+
+    # Fill with liquidity
+    from_n, to_n = sorted([from_n, to_n])
+    for i in range(from_n, to_n):
+        if i <= n:
+            amm.bands_y[i] = y
+        if i >= n:
+            amm.bands_x[i] = x
+
+    dx, dy = amm.trade_to_price(p_target)
