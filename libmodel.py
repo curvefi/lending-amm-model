@@ -104,4 +104,57 @@ class LendingAMM:
         """
         Not the method to be present in real smart contract, for simulations only
         """
-        pass
+        current_price = self.get_p()
+        if price > current_price:
+            bstep = 1  # going up: sell
+        elif price < current_price:
+            bstep = -1  # going down: buy
+        else:
+            return
+
+        dx = 0
+        dy = 0
+
+        while current_price * bstep < price * bstep:
+            n = self.active_band
+            y0 = self.get_y0()
+            g = self.get_g(y0)
+            f = self.get_f(y0)
+            x = self.bands_x[n]
+            y = self.bands_y[n]
+            # (f + x)(g + y) = const = p_top * A**2 * y0**2 = I
+            Inv = (f + x) * (g + y)
+            # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
+
+            if bstep == 1:
+                # reduce y, increase x, go up
+                y_dest = (Inv / price)**0.5 - g
+                if y_dest >= 0:
+                    # End the cycle
+                    self.bands_y[n] = y_dest
+                    self.bands_x[n] = Inv / (g + y_dest) - f
+                    break
+
+                else:
+                    self.bands_y[n] = 0
+                    self.bands_x[n] = Inv / g - f
+                    self.active_band += 1
+
+            else:
+                # increase y, reduce x, go down
+                x_dest = (Inv * price)**0.5 - f
+                if x_dest >= 0:
+                    # End the cycle
+                    self.bands_x[n] = x_dest
+                    self.bands_y[n] = Inv / (f + x_dest) - g
+                    break
+
+                else:
+                    self.bands_x[n] = 0
+                    self.bandx_y[n] = Inv / f - g
+                    self.active_band += 1
+
+            dx += self.bands_x[n] - x
+            dy += self.bands_y[n] - y
+
+        return dx, dy
