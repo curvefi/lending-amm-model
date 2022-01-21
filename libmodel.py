@@ -115,7 +115,8 @@ class LendingAMM:
         dx = 0
         dy = 0
 
-        while current_price * bstep < price * bstep:
+        while True:
+            # XXX handle bands with (0, 0)
             n = self.active_band
             y0 = self.get_y0()
             g = self.get_g(y0)
@@ -125,6 +126,11 @@ class LendingAMM:
             # (f + x)(g + y) = const = p_top * A**2 * y0**2 = I
             Inv = (f + x) * (g + y)
             # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
+
+            if x == 0 and y == 0:
+                if price >= self.p_down(n) and price <= self.p_up(n):
+                    break
+                self.active_band += bstep
 
             if bstep == 1:
                 # reduce y, increase x, go up
@@ -152,7 +158,7 @@ class LendingAMM:
                 else:
                     self.bands_x[n] = 0
                     self.bandx_y[n] = Inv / f - g
-                    self.active_band += 1
+                    self.active_band -= 1
 
             dx += self.bands_x[n] - x
             dy += self.bands_y[n] - y
