@@ -119,7 +119,7 @@ class LendingAMM:
             elif price < current_price:
                 bstep = -1  # going down: buy
             else:
-                return
+                return 0, 0
 
         dx = 0
         dy = 0

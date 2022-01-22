@@ -4,6 +4,7 @@ import hypothesis.strategies as st
 from libmodel import LendingAMM
 
 ERROR = 1 + 1e-8
+ABS_ERROR = 1e-5
 
 
 def approx(x, y):
@@ -96,7 +97,7 @@ def test_current_price(n, x, y, p_base, p_oracle, A):
     x=st.floats(0, 1e6),
     y=st.floats(0, 1e6),
 )
-def test_trade_in_band(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
+def test_trade(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
     amm = LendingAMM(p_base, A)
     amm.active_band = n
     amm.p_oracle = p_oracle
@@ -110,3 +111,10 @@ def test_trade_in_band(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
             amm.bands_x[i] = x
 
     dx, dy = amm.trade_to_price(p_target)
+
+    if amm.active_band > n:
+        assert dx >= -ABS_ERROR
+        assert dy <= ABS_ERROR
+    elif amm.active_band < n:
+        assert dx <= ABS_ERROR
+        assert dy >= -ABS_ERROR
