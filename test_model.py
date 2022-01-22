@@ -104,17 +104,48 @@ def test_trade(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
 
     # Fill with liquidity
     from_n, to_n = sorted([from_n, to_n])
-    for i in range(from_n, to_n):
+    for i in range(from_n, to_n + 1):
         if i <= n:
-            amm.bands_y[i] = y
-        if i >= n:
             amm.bands_x[i] = x
+        if i >= n:
+            amm.bands_y[i] = y
 
     dx, dy = amm.trade_to_price(p_target)
 
+    # Check that price is in the proper band, and the value is close enough
+    assert p_target >= amm.p_down(amm.active_band) / ERROR
+    assert p_target <= amm.p_up(amm.active_band) * ERROR
+    if amm.bands_x[amm.active_band] > 0 or amm.bands_y[amm.active_band] > 0:
+        p_new = amm.get_p()
+        assert p_new >= amm.p_down(amm.active_band) / ERROR
+        assert p_new <= amm.p_up(amm.active_band) * ERROR
+        assert approx(p_new, p_target) < 1e-8
+
+    # Check the sign of the trade direction
     if amm.active_band > n:
         assert dx >= -ABS_ERROR
         assert dy <= ABS_ERROR
     elif amm.active_band < n:
         assert dx <= ABS_ERROR
         assert dy >= -ABS_ERROR
+
+    # Check that we are all in proper currency in ecah band touched
+    for i in range(from_n, to_n + 1):
+        if (i <= n and x > 0) or (i >= n and y > 0):
+            _p = amm.p_down(i)
+            if i == n:
+                _x = x + y * _p
+                _y = y + x / _p
+            else:
+                if i > n:
+                    _x = y * _p
+                    _y = y
+                if i < n:
+                    _x = x
+                    _y = x / _p
+            if i > amm.active_band:
+                assert amm.bands_x[i] == 0
+                assert amm.bands_y[i] > 0.1 * _y
+            if i < amm.active_band:
+                assert amm.bands_y[i] == 0
+                assert amm.bands_x[i] > 0.1 * _x
