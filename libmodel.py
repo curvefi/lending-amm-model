@@ -65,9 +65,10 @@ class LendingAMM:
             assert self.bands_x[i] == 0
             self.bands_y[i] += y
 
-    def get_y0(self):
+    def get_y0(self, n=None):
         A = self.A
-        n = self.active_band
+        if n is None:
+            n = self.active_band
         x = self.bands_x[n]
         y = self.bands_y[n]
         p_o = self.p_oracle
@@ -80,17 +81,21 @@ class LendingAMM:
         D = b**2 + 4 * a * x * y
         return (b + sqrt(D)) / (2 * a)
 
-    def get_f(self, y0=None):
+    def get_f(self, y0=None, n=None):
         if y0 is None:
             y0 = self.get_y0()
-        p_top = self.p_top(self.active_band)
+        if n is None:
+            n = self.active_band
+        p_top = self.p_top(n)
         p_oracle = self.p_oracle
         return y0 * p_oracle**2 / p_top * self.A
 
-    def get_g(self, y0=None):
+    def get_g(self, y0=None, n=None):
         if y0 is None:
             y0 = self.get_y0()
-        p_top = self.p_top(self.active_band)
+        if n is None:
+            n = self.active_band
+        p_top = self.p_top(n)
         p_oracle = self.p_oracle
         return y0 * p_top / p_oracle * (self.A - 1)
 
@@ -177,3 +182,35 @@ class LendingAMM:
                 raise Exception("We should not be here ever")
 
         return dx, dy
+
+    def get_y_up(self, n):
+        """
+        Measure the amount of y in the band n if we adiabatically trade near p_oracle on the way up
+        """
+        x = self.bands_x[n]
+        y = self.bands_y[n]
+        if x == 0:
+            return y
+        elif y == 0:
+            return x / self.p_top(n) * sqrt(self.A / (self.A - 1))
+
+        p_o = self.p_oracle
+        y0 = self.get_y0(n)
+        g = self.get_g(y0, n)
+        f = self.get_f(y0, n)
+        # (f + x)(g + y) = const = p_top * A**2 * y0**2 = I
+        Inv = (f + x) * (g + y)
+        # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
+
+        # First, "trade" in this band to p_oracle
+        y_o = (Inv / p_o)**0.5 - g
+        if y_o >= 0:
+            x_o = Inv / (g + y_o) - f
+            if x_o < 0:
+                x_o = 0
+                y_o = Inv / f - g
+        else:
+            y_o = 0
+            x_o = Inv / g - f
+
+        return y_o + x_o / sqrt(self.p_top(n) * p_o)

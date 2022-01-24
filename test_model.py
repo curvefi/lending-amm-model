@@ -149,3 +149,25 @@ def test_trade(n, p_base, p_oracle, A, p_target, from_n, to_n, x, y):
             if i < amm.active_band:
                 assert amm.bands_y[i] == 0
                 assert amm.bands_x[i] > 0.1 * _x
+
+
+def test_y_up():
+    for i in range(-100, 100):
+        amm = LendingAMM(p_base=1000, A=10)
+        p_top = amm.p_top(i)
+        p_bottom = amm.p_bottom(i)
+
+        amm.p_oracle = p_top
+        amm.bands_y[i] = 10
+        amm.bands_x[i] = 0
+        assert amm.get_y_up(i) == 10
+
+        amm.p_oracle = p_bottom
+        amm.bands_y[i] = 0
+        amm.bands_x[i] = 10
+        assert amm.get_y_up(i) == 10 / p_top * (10 / 9)**0.5
+
+        amm.p_oracle = (p_top + p_bottom) / 2
+        amm.bands_y[i] = 10
+        amm.bands_x[i] = 10
+        assert approx(amm.get_y_up(i), 10 / p_top + 10) < 0.2
