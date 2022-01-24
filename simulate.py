@@ -49,7 +49,7 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
     p0 = data[0][1]
     initial_y0 = 1.0
     p_base = p0 * (A / (A - 1) + 1e-4)
-    amm = LendingAMM(p_base, A)
+    amm = LendingAMM(p_base, A, fee)
 
     # Fill ticks with liquidity
     amm.deposit_range(initial_y0, p0 * (1 - range_size), p0)  # 1 ETH
@@ -82,4 +82,4 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
 
 
 if __name__ == '__main__':
-    trader(0.5, 5e-4, 6000, 0, 0.5, log=True)
+    trader(0.5, 5e-4, 6000, 0, 0.2, log=True)

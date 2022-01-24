@@ -3,13 +3,14 @@ from math import log, floor, sqrt
 
 
 class LendingAMM:
-    def __init__(self, p_base, A):
+    def __init__(self, p_base, A, fee=0):
         self.p_base = p_base
         self.p_oracle = p_base
         self.A = A
         self.bands_x = defaultdict(float)
         self.bands_y = defaultdict(float)
         self.active_band = 0
+        self.fee = fee
 
     # Deposit:
     # - above active band - only in y,
@@ -152,29 +153,39 @@ class LendingAMM:
             if bstep == 1:
                 # reduce y, increase x, go up
                 y_dest = (Inv / price)**0.5 - g
+                x_old = self.bands_x[n]
                 if y_dest >= 0:
                     # End the cycle
                     self.bands_y[n] = y_dest
                     self.bands_x[n] = Inv / (g + y_dest) - f
+                    delta_x = self.bands_x[n] - x_old
+                    self.bands_x[n] += self.fee * delta_x
                     break
 
                 else:
                     self.bands_y[n] = 0
                     self.bands_x[n] = Inv / g - f
+                    delta_x = self.bands_x[n] - x_old
+                    self.bands_x[n] += self.fee * delta_x
                     self.active_band += 1
 
             else:
                 # increase y, reduce x, go down
                 x_dest = (Inv * price)**0.5 - f
+                y_old = self.bands_y[n]
                 if x_dest >= 0:
                     # End the cycle
                     self.bands_x[n] = x_dest
                     self.bands_y[n] = Inv / (f + x_dest) - g
+                    delta_y = self.bands_y[n] - y_old
+                    self.bands_y[n] += self.fee * delta_y
                     break
 
                 else:
                     self.bands_x[n] = 0
                     self.bands_y[n] = Inv / f - g
+                    delta_y = self.bands_y[n] - y_old
+                    self.bands_y[n] += self.fee * delta_y
                     self.active_band -= 1
 
             dx += self.bands_x[n] - x
