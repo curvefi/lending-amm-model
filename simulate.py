@@ -82,4 +82,4 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
 
 
 if __name__ == '__main__':
-    trader(0.2, 30e-4, 20000, 0, 0.2, log=True)
+    trader(0.2, 30e-4, 600, 0.7, 0.2, log=True)
