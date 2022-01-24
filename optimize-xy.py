@@ -10,7 +10,7 @@ def trade_optimize(A):
     x = 1
     y = 0
     p_up = 1
-    dx = -1e-4
+    dx = -1e-3
 
     xtol = 1e-10
 
@@ -45,9 +45,15 @@ def trade_optimize(A):
 
         p = newton(F, p)
 
+        print(x, y, y + x / (p_up * p)**0.5)
+
     return y
 
 
 if __name__ == '__main__':
     print(trade_optimize(10))
     # y = p_up * x0 * sqrt(1 + 1 / (A - 1))
+    # and from any point
+    # y0 = y + x / sqrt(p_up * p)
+    # but only if p = p_oracle
+    # So we "trade" to p = p_oracle and then measure
