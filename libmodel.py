@@ -1,5 +1,5 @@
 from collections import defaultdict
-from math import log, floor
+from math import log, floor, sqrt
 
 
 class LendingAMM:
@@ -73,25 +73,26 @@ class LendingAMM:
         p_o = self.p_oracle
         p_top = self.p_top(n)
 
-        return (
-            (p_top / p_o)**1.5 * (A - 1) * x + p_o**1.5 / p_top**0.5 * A * y +
-            ((p_top/p_o)**3 * (A - 1)**2 * x**2 + p_o**3/p_top * A**2 * y**2 +
-             2 * p_top * A*(A-1) * x*y + 4 * x*y * p_top * A) ** 0.5
-        ) / (2 * p_top * A)
+        # solve:
+        # p_o * A * y0**2 - y0 * (p_top/p_o * (A-1) * x + p_o**2/p_top * A * y) - xy = 0
+        b = p_top / p_o * (A-1) * x + p_o**2 / p_top * A * y
+        a = p_o * A
+        D = b**2 + 4 * a * x * y
+        return (b + sqrt(D)) / (2 * a)
 
     def get_f(self, y0=None):
         if y0 is None:
             y0 = self.get_y0()
         p_top = self.p_top(self.active_band)
         p_oracle = self.p_oracle
-        return y0 * p_oracle**1.5 / p_top**0.5 * self.A
+        return y0 * p_oracle**2 / p_top * self.A
 
     def get_g(self, y0=None):
         if y0 is None:
             y0 = self.get_y0()
         p_top = self.p_top(self.active_band)
         p_oracle = self.p_oracle
-        return y0 * p_top**1.5 / p_oracle**1.5 * (self.A - 1)
+        return y0 * p_top / p_oracle * (self.A - 1)
 
     def get_p(self, y0=None):
         if y0 is None:
