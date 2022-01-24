@@ -100,10 +100,12 @@ class LendingAMM:
         return y0 * p_top / p_oracle * (self.A - 1)
 
     def get_p(self, y0=None):
-        if y0 is None:
-            y0 = self.get_y0()
         x = self.bands_x[self.active_band]
         y = self.bands_y[self.active_band]
+        if x == 0 and y == 0:
+            return (self.p_up(self.active_band) * self.p_down(self.active_band)) ** 0.5
+        if y0 is None:
+            y0 = self.get_y0()
         return (self.get_f(y0) + x) / (self.get_g(y0) + y)
 
     def trade_to_price(self, price):
@@ -214,3 +216,6 @@ class LendingAMM:
             x_o = Inv / g - f
 
         return y_o + x_o / sqrt(self.p_top(n) * p_o)
+
+    def get_all_y(self):
+        return sum(self.get_y_up(i) for i in range(-100, 100))
