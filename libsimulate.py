@@ -116,6 +116,8 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
                   min_loan_duration=MIN_LOAN_DURATION):
     dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
     ls = 'xloss' if measure in ('xavg', 'xtopmax') else 'y'
+    if measure == 'xtopmax2':
+        ls = 'x'
     inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
     result = pool.map(f, inputs)
     if measure == "avg":
@@ -130,6 +132,8 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
         return sum(result) / samples * 86400**0.5
     if measure == "xtopmax":
         return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**0.5
+    if measure == "xtopmax2":
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
     raise Exception("Incorrect measure")
 
 
