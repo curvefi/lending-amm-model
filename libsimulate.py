@@ -2,6 +2,8 @@
 
 import json
 import gzip
+import random
+from multiprocessing import Pool, cpu_count
 from datetime import datetime
 from libmodel import LendingAMM
 
@@ -67,16 +69,17 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         if low < amm.get_p():
             amm.trade_to_price(low)
         d = datetime.fromtimestamp(t//1000).strftime("%Y/%m/%d %H:%M")
-        if loss_style == 'y':
-            loss = amm.get_all_y() / initial_y0 * 100
-        elif loss_style == 'x':
-            loss = amm.get_all_x() / initial_x_value * 100
-        elif loss_style == 'xloss':
-            loss = amm.get_all_x() / initial_all_x * 100
-        if log:
-            print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.get_p():.2f}\t\t{loss:.2f}%')
-        if verbose:
-            losses.append([t//1000, loss / 100])
+        if log or verbose:
+            if loss_style == 'y':
+                loss = amm.get_all_y() / initial_y0 * 100
+            elif loss_style == 'x':
+                loss = amm.get_all_x() / initial_x_value * 100
+            elif loss_style == 'xloss':
+                loss = amm.get_all_x() / initial_all_x * 100
+            if log:
+                print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.get_p():.2f}\t\t{loss:.2f}%')
+            if verbose:
+                losses.append([t//1000, loss / 100])
 
     # loss = 1 - amm.y0 / initial_y0
     if loss_style == 'y':
@@ -100,7 +103,38 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
             return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
 
 
+def f(x):
+    range_size, fee, Texp, pos, size, loss_style = x
+    return trader(range_size, fee, Texp, pos, size, verbose=False, log=False, loss_style=loss_style)
+
+
+pool = Pool(cpu_count())
+
+
+def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
+                  max_loan_duration=MAX_LOAN_DURATION,
+                  min_loan_duration=MIN_LOAN_DURATION):
+    dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
+    ls = 'xloss' if measure in ('xavg', 'xtopmax') else 'y'
+    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
+    result = pool.map(f, inputs)
+    if measure == "avg":
+        return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
+    if measure == "max":
+        return max(result) * 86400**0.5  # loss * sqrt(days)
+    if measure == "topmax":
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**.5  # top 5% losses
+    if measure == "sqavg":
+        return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
+    if measure == "xavg":
+        return sum(result) / samples
+    if measure == "xtopmax":
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
+    raise Exception("Incorrect measure")
+
+
 if __name__ == '__main__':
-    trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
+    print(get_loss_rate(0.3, 0.003, measure='xavg'))
+    # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
