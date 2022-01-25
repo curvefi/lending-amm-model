@@ -127,14 +127,14 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     if measure == "sqavg":
         return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
     if measure == "xavg":
-        return sum(result) / samples
+        return sum(result) / samples * 86400**0.5
     if measure == "xtopmax":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**0.5
     raise Exception("Incorrect measure")
 
 
 if __name__ == '__main__':
-    print(get_loss_rate(0.3, 0.003, measure='xavg'))
+    print(get_loss_rate(0.3, 0.003, measure='xtopmax'))
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
