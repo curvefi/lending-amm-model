@@ -228,5 +228,40 @@ class LendingAMM:
 
         return y_o + x_o / sqrt(self.p_top(n) * p_o)
 
+    def get_x_down(self, n):
+        """
+        Measure the amount of x in the band n if we adiabatically trade near p_oracle on the way up
+        """
+        x = self.bands_x[n]
+        y = self.bands_y[n]
+        if y == 0:
+            return y
+        elif x == 0:
+            return y * self.p_top(n) * sqrt((self.A - 1) / self.A)
+
+        p_o = self.p_oracle
+        y0 = self.get_y0(n)
+        g = self.get_g(y0, n)
+        f = self.get_f(y0, n)
+        # (f + x)(g + y) = const = p_top * A**2 * y0**2 = I
+        Inv = (f + x) * (g + y)
+        # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
+
+        # First, "trade" in this band to p_oracle
+        x_o = (Inv * p_o)**0.5 - f
+        if x_o >= 0:
+            y_o = Inv / (f + x_o) - g
+            if y_o < 0:
+                y_o = 0
+                x_o = Inv / g - f
+        else:
+            x_o = 0
+            y_o = Inv / f - g
+
+        return x_o + y_o * sqrt(self.p_bottom(n) * p_o)
+
     def get_all_y(self):
         return sum(self.get_y_up(i) for i in range(-100, 100))
+
+    def get_all_x(self):
+        return sum(self.get_x_down(i) for i in range(-100, 100))
