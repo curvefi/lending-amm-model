@@ -45,7 +45,7 @@ def trade_optimize(A):
 
         p = newton(F, p)
 
-        print(x, y, y + x / (p_up * p)**0.5)
+        print(x, y, y + x / (p_up * p)**0.5, x + y * (p_down * p)**0.5)
 
     return y
 
