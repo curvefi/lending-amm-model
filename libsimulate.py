@@ -115,8 +115,8 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
                   max_loan_duration=MAX_LOAN_DURATION,
                   min_loan_duration=MIN_LOAN_DURATION):
     dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
-    ls = 'xloss' if measure in ('xavg', 'xtopmax') else 'y'
-    if measure == 'xtopmax2':
+    ls = 'xloss' if measure == 'xtopmax' else 'y'
+    if measure in ('xavg', 'xtopmax2'):
         ls = 'x'
     inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
     result = pool.map(f, inputs)
@@ -129,7 +129,7 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     if measure == "sqavg":
         return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
     if measure == "xavg":
-        return sum(result) / samples * 86400**0.5
+        return sum(result) / samples
     if measure == "xtopmax":
         return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**0.5
     if measure == "xtopmax2":
@@ -138,7 +138,7 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
 
 
 if __name__ == '__main__':
-    print(get_loss_rate(0.3, 0.003, measure='xtopmax'))
+    print(get_loss_rate(0.3, 0.1, measure='avg'))
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
