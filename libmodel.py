@@ -225,6 +225,7 @@ class LendingAMM:
         else:
             y_o = 0
             x_o = Inv / g - f
+            p_o = self.p_bottom(n)
 
         return y_o + x_o / sqrt(self.p_top(n) * p_o)
 
@@ -235,7 +236,7 @@ class LendingAMM:
         x = self.bands_x[n]
         y = self.bands_y[n]
         if y == 0:
-            return y
+            return x
         elif x == 0:
             return y * self.p_top(n) * sqrt((self.A - 1) / self.A)
 
@@ -257,6 +258,7 @@ class LendingAMM:
         else:
             x_o = 0
             y_o = Inv / f - g
+            p_o = self.p_top(n)
 
         return x_o + y_o * sqrt(self.p_bottom(n) * p_o)
 

@@ -49,10 +49,12 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
     p0 = data[0][1]
     initial_y0 = 1.0
     p_base = p0 * (A / (A - 1) + 1e-4)
+    initial_x_value = initial_y0 * p_base
     amm = LendingAMM(p_base, A, fee)
 
     # Fill ticks with liquidity
     amm.deposit_range(initial_y0, p0 * (1 - range_size), p0)  # 1 ETH
+    initial_all_x = amm.get_all_x()
 
     losses = []
 
@@ -65,7 +67,12 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         if low < amm.get_p():
             amm.trade_to_price(low)
         d = datetime.fromtimestamp(t//1000).strftime("%Y/%m/%d %H:%M")
-        loss = amm.get_all_y() / initial_y0 * 100
+        if loss_style == 'y':
+            loss = amm.get_all_y() / initial_y0 * 100
+        elif loss_style == 'x':
+            loss = amm.get_all_x() / initial_x_value * 100
+        elif loss_style == 'xloss':
+            loss = amm.get_all_x() / initial_all_x * 100
         if log:
             print(f'{d}\t{o:.2f}\t{ema:.2f}\t{amm.get_p():.2f}\t\t{loss:.2f}%')
         if verbose:
@@ -80,6 +87,20 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         else:
             return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
 
+    elif loss_style == 'x':
+        loss = 1 - amm.get_all_x() / initial_x_value
+        return loss
+
+    if loss_style == 'xloss':
+        loss = 1 - amm.get_all_x() / initial_all_x
+
+        if verbose:
+            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
+        else:
+            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+
 
 if __name__ == '__main__':
-    trader(0.2, 30e-4, 600, 0.7, 0.2, log=True)
+    trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
+    # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
+    # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
