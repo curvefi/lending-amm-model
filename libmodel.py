@@ -263,7 +263,7 @@ class LendingAMM:
         return x_o + y_o * sqrt(self.p_bottom(n) * p_o)
 
     def get_all_y(self):
-        return sum(self.get_y_up(i) for i in range(-100, 100))
+        return sum(self.get_y_up(i) for i in range(-500, 500))
 
     def get_all_x(self):
-        return sum(self.get_x_down(i) for i in range(-100, 100))
+        return sum(self.get_x_down(i) for i in range(-500, 500))

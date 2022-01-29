@@ -138,7 +138,10 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
 
 
 if __name__ == '__main__':
-    print(get_loss_rate(0.3, 0.1, measure='avg'))
+    print(get_loss_rate(0.2, 1e-2, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
+    print(get_loss_rate(0.2, 3e-3, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
+    print(get_loss_rate(0.2, 5e-4, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
+    print(get_loss_rate(0.2, 0.0, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
