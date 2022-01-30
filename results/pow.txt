@@ -1,0 +1,1 @@
+xtopmax2 proportional to duration**0.18
