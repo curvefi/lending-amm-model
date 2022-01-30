@@ -86,9 +86,9 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         loss = 1 - amm.get_all_y() / initial_y0
 
         if verbose:
-            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
+            return loss, losses
         else:
-            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+            return loss
 
     elif loss_style == 'x':
         loss = 1 - amm.get_all_x() / initial_x_value
@@ -121,11 +121,11 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
     result = pool.map(f, inputs)
     if measure == "avg":
-        return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
+        return sum(result) / samples  # loss * sqrt(days)
     if measure == "max":
         return max(result) * 86400**0.5  # loss * sqrt(days)
     if measure == "topmax":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**.5  # top 5% losses
+        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)  # top 5% losses
     if measure == "sqavg":
         return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
     if measure == "xavg":
@@ -138,11 +138,13 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
 
 
 if __name__ == '__main__':
-    print(get_loss_rate(0.6, 1e-3, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
-    print(get_loss_rate(0.6, 3e-3, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
-    print(get_loss_rate(0.6, 1e-2, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
-    print(get_loss_rate(0.6, 3e-2, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
-    print(get_loss_rate(0.6, 7e-2, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
+    days = 3
+    measure = 'avg'
+    print(get_loss_rate(0.1, 1e-2, measure=measure, min_loan_duration=days, max_loan_duration=days, Texp=10000))
+    print(get_loss_rate(0.2, 1e-2, measure=measure, min_loan_duration=days, max_loan_duration=days, Texp=10000))
+    print(get_loss_rate(0.3, 1e-2, measure=measure, min_loan_duration=days, max_loan_duration=days, Texp=10000))
+    print(get_loss_rate(0.4, 1e-2, measure=measure, min_loan_duration=days, max_loan_duration=days, Texp=10000))
+    print(get_loss_rate(0.6, 1e-2, measure=measure, min_loan_duration=days, max_loan_duration=days, Texp=10000))
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='xloss')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='y')
     # trader(0.50, 30e-4, 600, 0.7, 0.2, log=True, loss_style='x')
