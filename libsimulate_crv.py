@@ -35,7 +35,7 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
     size: 0..1
     """
     i0 = int(position * len(price_data) / 2)
-    i1 = max(i0 - 24*2*60, 0)
+    i1 = max(i0 - 24*5*60, 0)
     data = price_data[i1:int((position + size) * len(price_data) / 2)]
     emas = []
     ema = data[0][1]
