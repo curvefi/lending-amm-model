@@ -1,5 +1,6 @@
 # import pytest
 from hypothesis import given
+from random import random
 import hypothesis.strategies as st
 from libmodel import LendingAMM
 
@@ -19,6 +20,23 @@ def test_p_up_down():
         p_down = amm.p_down(i)
         assert p_up > p_down
         assert amm.p_down(i + 1) == p_up
+
+
+def test_price_continuity():
+    amm = LendingAMM(p_base=1000, A=100)
+
+    for i in range(-100, 100):
+        amm.bands_x[i] = 10000 * random() + 1.0
+        amm.bands_y[i] = 0.0
+        amm.bands_x[i+1] = 0.0
+        amm.bands_y[i+1] = 10 * random() + 0.001
+        amm.active_band = i
+        p1 = amm.get_p()
+        amm.active_band = i+1
+        p2 = amm.get_p()
+        assert abs(p1 - p2) < 1e-8
+        assert abs(p1 - amm.p_up(i)) < 1e-8
+        assert abs(p2 - amm.p_down(i+1)) < 1e-8
 
 
 def test_p_top_bottom():
