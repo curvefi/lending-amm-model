@@ -26,34 +26,34 @@ class LendingAMM:
 
     def p_down(self, n_band):
         """
-        Upper price for the band at the current p_oracle
+        Lower price for the band at the current p_oracle
         """
-        k = (self.A - 1) / self.A  # equal to (p_up / p_down)
+        k = (self.A - 1) / self.A  # equal to (p_down / p_up)
         p_base = self.p_base * k ** n_band
         return self.p_oracle**3 / p_base**2
 
     def p_up(self, n_band):
         """
-        Lower price for the band at the current p_oracle
+        Upper price for the band at the current p_oracle
         """
-        k = (self.A - 1) / self.A  # equal to (p_up / p_down)
+        k = (self.A - 1) / self.A  # equal to (p_down / p_up)
         p_base = self.p_base * k ** (n_band + 1)
         return self.p_oracle**3 / p_base**2
 
     def p_top(self, n):
-        k = (self.A - 1) / self.A  # equal to (p_up / p_down)
+        k = (self.A - 1) / self.A  # equal to (p_down / p_up)
         # Prices which show start and end of band when p_oracle = p
         return self.p_base * k ** n
 
     def p_bottom(self, n):
-        k = (self.A - 1) / self.A  # equal to (p_up / p_down)
+        k = (self.A - 1) / self.A  # equal to (p_down / p_up)
         return self.p_top(n) * k
 
     def get_band_n(self, p):
         """
         Rounds correct way for both higher and lower prices
         """
-        k = (self.A - 1) / self.A  # equal to (p_up / p_down)
+        k = (self.A - 1) / self.A  # equal to (p_down / p_up)
         return floor(log(p / self.p_base) / log(k))
 
     def deposit_range(self, amount, p1, p2):
