@@ -18,11 +18,12 @@ shifts = np.array(shifts)
 bins = np.linspace(-0.4, max(shifts), 40)
 db = bins[1] - bins[0]
 
-xshifts = [shifts[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
-xloss = [results[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
+xshifts = [100 * shifts[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
+xloss = [100 * results[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
 
 pylab.plot(xshifts, xloss)
 pylab.xlabel('Price drop relative to liquidation threshold [%]')
 pylab.ylabel('Relative loss [%]')
 pylab.title('Losses during a dip')
+pylab.grid()
 pylab.show()
