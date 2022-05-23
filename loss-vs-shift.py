@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import matplotlib
 import pylab
 import numpy as np
 from libsimulate import get_loss_shift
@@ -9,6 +10,10 @@ TEXP = 10000
 LOAN_DURATION = 3  # days
 SAMPLES = 50000
 FEE = 0.01
+MIN_RANGE = -0.4
+N_BINS = 30
+
+matplotlib.use('TkAgg')
 
 for range_size in [0.2, 0.05]:
     results, shifts = get_loss_shift(range_size, FEE, Texp=TEXP, min_loan_duration=LOAN_DURATION, max_loan_duration=LOAN_DURATION, samples=SAMPLES)
@@ -16,7 +21,7 @@ for range_size in [0.2, 0.05]:
     results = np.array(results)
     shifts = np.array(shifts)
 
-    bins = np.linspace(-0.4, max(shifts), 40)
+    bins = np.linspace(MIN_RANGE, max(shifts), N_BINS)
     db = bins[1] - bins[0]
 
     xshifts = [100 * shifts[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
