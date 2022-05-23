@@ -29,7 +29,7 @@ def load_prices(f, add_reverse=True):
 price_data = load_prices('data/ethusdt-1m.json.gz')
 
 
-def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss_style='y'):
+def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss_style='y', p_shift=None):
     """
     position: 0..1
     size: 0..1
@@ -48,7 +48,10 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
     emas = emas[i0 - i1:]
 
     data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
-    p0 = data[0][1]
+    if p_shift is None:
+        p0 = data[0][1]
+    else:
+        p0 = data[0][1] * (1 - p_shift)
     initial_y0 = 1.0
     p_base = p0 * (A / (A - 1) + 1e-4)
     initial_x_value = initial_y0 * p_base
@@ -82,16 +85,18 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
                 losses.append([t//1000, loss / 100])
 
     # loss = 1 - amm.y0 / initial_y0
-    if loss_style == 'y':
+    if loss_style.startswith('y'):
         loss = 1 - amm.get_all_y() / initial_y0
 
-        if verbose:
-            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
-        else:
-            return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
+        if not loss_style.endswith('raw'):
+            if verbose:
+                return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5, losses
+            else:
+                return loss / ((data[-1][0] - data[0][0]) / 1000)**0.5
 
     elif loss_style == 'x':
-        loss = 1 - amm.get_all_x() / initial_x_value
+        loss = 1 - amm.get_all_x() / initial_all_x
+        # loss = 1 - amm.get_all_x() / initial_x_value
         return loss
 
     if loss_style == 'xloss':
@@ -104,8 +109,9 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
 
 
 def f(x):
-    range_size, fee, Texp, pos, size, loss_style = x
-    return trader(range_size, fee, Texp, pos, size, verbose=False, log=False, loss_style=loss_style)
+    range_size, fee, Texp, pos, size, loss_style, p_shift = x
+    return trader(range_size, fee, Texp, pos, size, verbose=False, log=False, loss_style=loss_style,
+                  p_shift=p_shift)
 
 
 pool = Pool(cpu_count())
@@ -118,7 +124,8 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     ls = 'xloss' if measure == 'xtopmax' else 'y'
     if measure in ('xavg', 'xtopmax2'):
         ls = 'x'
-    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 + min_loan_duration*dt, ls) for _ in range(samples)]
+    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 +
+               min_loan_duration*dt, ls, 0) for _ in range(samples)]
     result = pool.map(f, inputs)
     if measure == "avg":
         return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
@@ -137,7 +144,29 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     raise Exception("Incorrect measure")
 
 
+def get_loss_shift(range_size, fee, Texp=T, ls='x', samples=SAMPLES,
+                   max_loan_duration=MAX_LOAN_DURATION,
+                   min_loan_duration=MIN_LOAN_DURATION,
+                   max_p_shift=0.05):
+    dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
+    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 +
+               min_loan_duration*dt, ls, random.random() * max_p_shift) for _ in range(samples)]
+    price_shifts = []
+    for row in inputs:
+        position = row[3]
+        size = row[4]
+        p_shift = row[6]
+        data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
+        p0 = data[0][1] * (1 - p_shift)
+        min_p = min(d[1] for d in data)
+        # print(min_p, p0, position, size)
+        price_shifts.append(min_p / p0 - 1)
+    result = pool.map(f, inputs)
+    return result, price_shifts
+
+
 if __name__ == '__main__':
+    get_loss_shift(0.2, 1e-2, Texp=10000, min_loan_duration=3, max_loan_duration=3, samples=400)
     print(get_loss_rate(0.2, 1e-2, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
     print(get_loss_rate(0.2, 3e-3, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
     print(get_loss_rate(0.2, 5e-4, measure='avg', min_loan_duration=30, max_loan_duration=30, Texp=10000))
