@@ -202,12 +202,29 @@ class LendingAMM:
         """
         x = self.bands_x[n]
         y = self.bands_y[n]
-        if x == 0:
-            return y
-        elif y == 0:
-            return x / self.p_top(n) * sqrt(self.A / (self.A - 1))
-
         p_o = self.p_oracle
+        p_o_up = self.p_top(n)
+        p_o_down = p_o_up * (self.A - 1) / self.A
+        p_current_mid = p_o**3 / p_o_down**2 * (self.A - 1) / self.A
+        sqrt_band_ratio = sqrt((self.A - 1) / self.A)
+
+        if x == 0 or y == 0:
+            if x == 0 and y == 0:
+                return 0
+
+            if p_o > p_o_up:
+                # all to y at constant p_o, then to target currency adiabatically
+                y_equiv = y
+                if y == 0:
+                    y_equiv = x / p_current_mid
+                return y_equiv
+
+            elif p_o < p_o_down:
+                x_equiv = x
+                if x == 0:
+                    x_equiv = y * p_current_mid
+                return x_equiv * sqrt_band_ratio / p_o_up
+
         y0 = self.get_y0(n)
         g = self.get_g(y0, n)
         f = self.get_f(y0, n)
@@ -216,18 +233,24 @@ class LendingAMM:
         # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
 
         # First, "trade" in this band to p_oracle
-        y_o = (Inv / p_o)**0.5 - g
-        if y_o >= 0:
-            x_o = Inv / (g + y_o) - f
-            if x_o < 0:
-                x_o = 0
-                y_o = Inv / f - g
-        else:
-            y_o = 0
-            x_o = Inv / g - f
-            p_o = self.p_bottom(n)
+        x_o = 0
+        y_o = 0
 
-        return y_o + x_o / sqrt(self.p_top(n) * p_o)
+        if p_o > p_o_up:  # p_o < p_current_down, all to y
+            # x_o = 0
+            y_o = max(Inv / f, g) - g
+            return y_o
+
+        elif p_o < p_o_down:  # p_o > p_current_up, all to x
+            # y_o = 0
+            x_o = max(Inv / g, f) - f
+            return x_o * sqrt_band_ratio / p_o_up
+
+        else:
+            y_o = max(sqrt(Inv / p_o), g) - g
+            x_o = max(Inv / (g + y_o), f) - f
+            # Now adiabatic conversion from definitely in-band
+            return y_o + x_o / sqrt(p_o_up * p_o)
 
     def get_x_down(self, n):
         """
@@ -235,12 +258,29 @@ class LendingAMM:
         """
         x = self.bands_x[n]
         y = self.bands_y[n]
-        if y == 0:
-            return x
-        elif x == 0:
-            return y * self.p_top(n) * sqrt((self.A - 1) / self.A)
-
         p_o = self.p_oracle
+        p_o_up = self.p_top(n)
+        p_o_down = p_o_up * (self.A - 1) / self.A
+        p_current_mid = p_o**3 / p_o_down**2 * (self.A - 1) / self.A
+        sqrt_band_ratio = sqrt((self.A - 1) / self.A)
+
+        if x == 0 or y == 0:
+            if x == 0 and y == 0:
+                return 0
+
+            if p_o > p_o_up:
+                # all to y at constant p_o, then to target currency adiabatically
+                y_equiv = y
+                if y == 0:
+                    y_equiv = x / p_current_mid
+                return y_equiv * p_o_up / sqrt_band_ratio
+
+            elif p_o < p_o_down:
+                x_equiv = x
+                if x == 0:
+                    x_equiv = y * p_current_mid
+                return x_equiv
+
         y0 = self.get_y0(n)
         g = self.get_g(y0, n)
         f = self.get_f(y0, n)
@@ -249,18 +289,24 @@ class LendingAMM:
         # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
 
         # First, "trade" in this band to p_oracle
-        x_o = (Inv * p_o)**0.5 - f
-        if x_o >= 0:
-            y_o = Inv / (f + x_o) - g
-            if y_o < 0:
-                y_o = 0
-                x_o = Inv / g - f
-        else:
-            x_o = 0
-            y_o = Inv / f - g
-            p_o = self.p_top(n)
+        x_o = 0
+        y_o = 0
 
-        return x_o + y_o * sqrt(self.p_bottom(n) * p_o)
+        if p_o > p_o_up:  # p_o < p_current_down, all to y
+            # x_o = 0
+            y_o = max(Inv / f, g) - g
+            return y_o * p_o_up / sqrt_band_ratio
+
+        elif p_o < p_o_down:  # p_o > p_current_up, all to x
+            # y_o = 0
+            x_o = max(Inv / g, f) - f
+            return x_o
+
+        else:
+            y_o = max(sqrt(Inv / p_o), g) - g
+            x_o = max(Inv / (g + y_o), f) - f
+            # Now adiabatic conversion from definitely in-band
+            return x_o + y_o * sqrt(p_o_down * p_o)
 
     def get_all_y(self):
         return sum(self.get_y_up(i) for i in range(-500, 500))
