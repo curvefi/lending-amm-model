@@ -1,0 +1,2 @@
+01. loss-vs-T. T = 7000 s is minimum
+02. loss-vs-fee. fee = 0.015 (choose 0.01 - ~same but safer)

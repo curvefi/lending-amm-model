@@ -13,7 +13,7 @@ MIN_RANGE = -0.2
 N_BINS = 30
 RANGE_SIZE = 0.2
 
-matplotlib.use('TkAgg')
+matplotlib.use('tkagg')
 
 for texp in [1000, 5000, 10000, 30000, 50000, 100000]:
     results, shifts = get_loss_shift(RANGE_SIZE, FEE, Texp=texp, min_loan_duration=LOAN_DURATION, max_loan_duration=LOAN_DURATION, samples=SAMPLES)
@@ -27,6 +27,7 @@ for texp in [1000, 5000, 10000, 30000, 50000, 100000]:
     xshifts = [100 * shifts[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
     xloss = [100 * results[(shifts >= s) * (shifts < s + db)].mean() for s in bins]
 
+    print(texp)
     pylab.plot(xshifts, xloss, label='Texp={0}'.format(texp))
 
 pylab.xlabel('Price drop relative to liquidation threshold [%]')
