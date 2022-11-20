@@ -140,7 +140,7 @@ class LendingAMM:
             f = self.get_f(y0)
             x = self.bands_x[n]
             y = self.bands_y[n]
-            # (f + x)(g + y) = const = p_top * A**2 * y0**2 = I
+            # (f + x)(g + y) = const = p_oracle * A**2 * y0**2 = I
             Inv = (f + x) * (g + y)
             # p = (f + x) / (g + y) => p * (g + y)**2 = I or (f + x)**2 / p = I
 
