@@ -1,0 +1,1 @@
+Experiments here measure maximum possible loss over 1 day
