@@ -26,7 +26,7 @@ def load_prices(f, add_reverse=True):
     return data
 
 
-price_data = load_prices('data/ethusdt-1m.json.gz')
+price_data = load_prices('data/ethusdt-1m.short.json.gz')
 
 
 def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss_style='y', p_shift=None):
@@ -126,7 +126,8 @@ pool = Pool(cpu_count())
 
 def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
                   max_loan_duration=MAX_LOAN_DURATION,
-                  min_loan_duration=MIN_LOAN_DURATION):
+                  min_loan_duration=MIN_LOAN_DURATION,
+                  n_top_samples=None):
     dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
     ls = 'xloss' if measure == 'xtopmax' else 'y'
     if measure in ('xavg', 'xtopmax2'):
@@ -137,20 +138,22 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 +
                min_loan_duration*dt, ls, 0) for _ in range(samples)]
     result = pool.map(f, inputs)
+    if not n_top_samples:
+        n_top_samples = samples // 20
     if measure == "avg":
         return sum(result) / samples * 86400**0.5  # loss * sqrt(days)
     if measure == "max":
         return max(result) * 86400**0.5  # loss * sqrt(days)
     if measure == "topmax":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**.5  # top 5% losses
+        return sum(sorted(result)[::-1][:n_top_samples]) / n_top_samples * 86400**.5  # top 5% losses
     if measure == "sqavg":
         return (sum(r**2 for r in result) / samples * 86400)**0.5  # loss * sqrt(days)
     if measure == "xavg":
         return sum(result) / samples
     if measure == "xtopmax":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20) * 86400**0.5
+        return sum(sorted(result)[::-1][:n_top_samples]) / n_top_samples * 86400**0.5
     if measure == "xtopmax2":
-        return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
+        return sum(sorted(result)[::-1][:n_top_samples]) / n_top_samples
     raise Exception("Incorrect measure")
 
 

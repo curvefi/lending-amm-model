@@ -3,17 +3,20 @@ from libsimulate import get_loss_rate
 if __name__ == '__main__':
     import numpy as np
 
-    range_size = 0.2
-    fee = 0.01
-    days = 7
+    range_size = 0.08
+    fee = 0.003
+    days = 1
     samples = 20000
-    T = np.logspace(np.log10(500), np.log10(100000), 40)
+    n_top_samples = 20
+    # n_top_samples = samples
+    T = np.logspace(np.log10(100), np.log10(50000), 40)
     losses = []
     for t in T:
         losses.append(
             get_loss_rate(
                 range_size, fee, Texp=float(t), measure='xtopmax2',
-                min_loan_duration=days, max_loan_duration=days, samples=samples))
+                min_loan_duration=days, max_loan_duration=days, samples=samples,
+                n_top_samples=n_top_samples))
         print(t, losses[-1])
 
     try:
