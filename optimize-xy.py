@@ -25,18 +25,27 @@ def trade_optimize(A):
     yy = []
 
     def F(p):
-        # F(p) = (f + x) * (g + y) - p_up * A**2 * y0**2 = 0
+        # F(p) = (f + x) * (g + y) - p_o * A**2 * y0**2 = 0
         # where y0 is substituted from get_y0(p)
+        # And we look for p = p_o
 
         # 1. Calculate y0 from (f + x) / (g + y) = p
-        f = p**2 / p_up * A
-        g = p_up / p * (A - 1)
+        # g = p_up / p_o * (A - 1) * y0 === gamma * y0
+        # f = p_o**2 / p_up * A * y0 === phi * y0
+        # Now when p_o = p, phi and gamma are:
+        phi = p**2 / p_up * A
+        gamma = p_up / p * (A - 1)
+        # Substitute f=phi*y0, g=gamma*y0 to price eqn:
+        # (phi * y0 + x) / (gamma * y0 + y) = p
+        # and solve against y0:
+        # y0 = (p * y - x) / (phi - p * gamma) === _up / _down:
         _up = (p * y - x)
-        _down = (f - p * g)
-        # y0 = (p * y - x) / (f - p * g)
+        _down = (phi - p * gamma)
 
-        # 2. Calculate F
-        return (f*_up + x*_down) * (g*_up + y*_down) - p * A**2 * _up**2
+        # Now, back to
+        # F(p) = (f + x) * (g + y) - p_o * A**2 * y0**2 = 0
+        # We are looking for its zero, so let's mutiply by _down**2
+        return (phi*_up + x*_down) * (gamma*_up + y*_down) - p * A**2 * _up**2
 
     p = p_down
     assert abs(F(p)) < xtol
