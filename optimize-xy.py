@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import numpy as np
 from scipy.optimize import newton
 
 # Starts from x = 1, y=0, price = p_down = p_up * (A - 1) / A
@@ -6,15 +7,22 @@ from scipy.optimize import newton
 # Need to find y(A) * p_up
 
 
+x_initial = 1  # Had 1 dollar first
+dx = -1e-4  # Step size. The smaller - the more precise it will be
+A = 10
+
+
 def trade_optimize(A):
-    x = 1
-    y = 0
-    p_up = 1
-    dx = -1e-3
+    x = x_initial
+    y = 0  # And 0 collateral
+    p_up = 1  # price = 1.0 for simplicity
 
     xtol = 1e-10
 
     p_down = p_up * (A - 1) / A
+
+    xx = []
+    yy = []
 
     def F(p):
         # F(p) = (f + x) * (g + y) - p_up * A**2 * y0**2 = 0
@@ -45,13 +53,28 @@ def trade_optimize(A):
 
         p = newton(F, p)
 
-        print(x, y, y + x / (p_up * p)**0.5, x + y * (p_down * p)**0.5)
+        y_up = y + x / (p_up * p)**0.5
+        x_down = x + y * (p_down * p)**0.5
 
-    return y
+        xx.append(x_down)
+        yy.append(y_up)
+
+        print("x = {:.4f},  y = {:.4f};   y↑ = {:0.6f},  x↓ = {:.6f}".format(
+            x, y, y_up, x_down))
+
+    return y, xx, yy
 
 
 if __name__ == '__main__':
-    print(trade_optimize(10))
+    y_up, xx, yy = trade_optimize(A)
+    x_err = np.abs((np.array(xx) - x_initial)).max() / x_initial
+    y_err = np.abs((np.array(yy) - y_up)).max() / y_up
+
+    print()
+    print('Amount of collateral after trading:', y_up)
+    print('Max relative deviation of x:', x_err)
+    print('Max relative deviation of y:', y_err)
+    print('Step size:', abs(dx))
     # y = p_up * x0 * sqrt(1 + 1 / (A - 1))
     # and from any point
     # y0 = y + x / sqrt(p_up * p)
