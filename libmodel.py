@@ -206,7 +206,7 @@ class LendingAMM:
         p_o_up = self.p_top(n)
         p_o_down = p_o_up * (self.A - 1) / self.A
         p_current_mid = p_o**3 / p_o_down**2 * (self.A - 1) / self.A
-        sqrt_band_ratio = sqrt((self.A - 1) / self.A)
+        sqrt_band_ratio = sqrt(self.A / (self.A - 1))
 
         if x == 0 or y == 0:
             if x == 0 and y == 0:
@@ -262,7 +262,7 @@ class LendingAMM:
         p_o_up = self.p_top(n)
         p_o_down = p_o_up * (self.A - 1) / self.A
         p_current_mid = p_o**3 / p_o_down**2 * (self.A - 1) / self.A
-        sqrt_band_ratio = sqrt((self.A - 1) / self.A)
+        sqrt_band_ratio = sqrt(self.A / (self.A - 1))
 
         if x == 0 or y == 0:
             if x == 0 and y == 0:
