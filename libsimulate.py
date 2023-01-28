@@ -12,7 +12,7 @@ MAX_LOAN_DURATION = 30  # days
 EXT_FEE = 0.0005
 SAMPLES = 400
 T = 600  # s
-A = 100
+A = 50
 
 
 def load_prices(f, add_reverse=True):
