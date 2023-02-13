@@ -3,6 +3,8 @@
 import json
 import gzip
 import random
+import math
+import numpy as np
 from multiprocessing import Pool, cpu_count
 from datetime import datetime
 from libmodel import LendingAMM
@@ -176,6 +178,25 @@ def get_loss_shift(range_size, fee, Texp=T, ls='x', samples=SAMPLES,
         price_shifts.append(min_p / p0 - 1)
     result = pool.map(f, inputs)
     return result, price_shifts
+
+
+def get_loss_variance(range_size, fee, Texp=T, ls='x', samples=SAMPLES,
+                   max_loan_duration=MAX_LOAN_DURATION,
+                   min_loan_duration=MIN_LOAN_DURATION):
+    dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
+    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 +
+               min_loan_duration*dt, ls, 0) for _ in range(samples)]
+    price_variances = []
+    for row in inputs:
+        position = row[3]
+        size = row[4]
+        data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
+        prices = np.array(list(map(lambda d: (d[2] + d[3]) / 2, data)))
+        variance = prices.var()  # abs
+        mean = prices.mean()  # abs
+        price_variances.append(math.sqrt(variance) / mean)  # sqrt(D) / M [%]
+    result = pool.map(f, inputs)
+    return result, price_variances
 
 
 if __name__ == '__main__':

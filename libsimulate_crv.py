@@ -3,6 +3,8 @@
 import json
 import gzip
 import random
+import math
+import numpy as np
 from multiprocessing import Pool, cpu_count
 from datetime import datetime
 from libmodel import LendingAMM
@@ -15,11 +17,25 @@ T = 600  # s
 A = 100
 
 
+def filter_broken_data(price_data):
+    last_ts = 0
+    broken_indexes = []
+    for i in range(len(price_data)):
+        if price_data[i][0] < last_ts:
+            broken_indexes.append(i)
+        else:
+            last_ts = price_data[i][0]
+
+    filtered = [x if i not in broken_indexes else None for i, x in enumerate(price_data)]
+    return list(filter(lambda x: x is not None, filtered))
+
+
 def load_prices(f, add_reverse=True):
     with gzip.open(f, "r") as f:
         data = json.load(f)
     # timestamp, OHLC, vol
     data = [[int(d[0])] + [float(x) for x in d[1:6]] for d in data]
+    data = filter_broken_data(data)
     if add_reverse:
         t0 = data[-1][0]
         data += [[t0 + (t0 - d[0])] + d[1:] for d in data[::-1]]
@@ -91,7 +107,8 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
             return loss
 
     elif loss_style == 'x':
-        loss = 1 - amm.get_all_x() / initial_x_value
+        loss = 1 - amm.get_all_x() / initial_all_x
+        # loss = 1 - amm.get_all_x() / initial_x_value
         return loss
 
     if loss_style == 'xloss':
@@ -135,6 +152,25 @@ def get_loss_rate(range_size, fee, Texp=T, measure='topmax', samples=SAMPLES,
     if measure == "xtopmax2":
         return sum(sorted(result)[::-1][:samples//20]) / (samples // 20)
     raise Exception("Incorrect measure")
+
+
+def get_loss_variance(range_size, fee, Texp=T, ls='x', samples=SAMPLES,
+                   max_loan_duration=MAX_LOAN_DURATION,
+                   min_loan_duration=MIN_LOAN_DURATION):
+    dt = 86400 * 1000 / (price_data[-1][0] - price_data[0][0])
+    inputs = [(range_size, fee, Texp, random.random(), (max_loan_duration-min_loan_duration) * dt * random.random()**2 +
+               min_loan_duration*dt, ls) for _ in range(samples)]
+    price_variances = []
+    for row in inputs:
+        position = row[3]
+        size = row[4]
+        data = price_data[int(position * len(price_data) / 2):int((position + size) * len(price_data) / 2)]
+        prices = np.array(list(map(lambda d: (d[2] + d[3]) / 2, data)))
+        variance = prices.var()  # abs
+        mean = prices.mean()  # abs
+        price_variances.append(math.sqrt(variance) / mean)  # sqrt(D) / M [%]
+    result = pool.map(f, inputs)
+    return result, price_variances
 
 
 if __name__ == '__main__':
