@@ -12,7 +12,8 @@ if __name__ == '__main__':
     for mul in muls:
         mul = float(mul)
         losses.append(get_loss_rate(range_size, fee, Texp=T, measure=measure, min_loan_duration=1, max_loan_duration=1,
-                                    samples=20_000, n_top_samples=20, other={'dynamic_fee_multiplier': mul}))
+                                    samples=20_000, n_top_samples=20,
+                                    other={'dynamic_fee_multiplier': mul, 'use_po_fee': 1, 'po_fee_delay': 1}))
         print(mul, losses[-1])
 
     try:

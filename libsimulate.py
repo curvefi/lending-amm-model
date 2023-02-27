@@ -72,6 +72,7 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
                 p_down = amm.p_down(n)
                 dfee = amm.dynamic_fee(n)
                 p_down_ = p_down * (1 + dfee)
+                # XXX print(n, amm.min_band, amm.max_band, p_down, p, amm.get_p())
                 if p > p_down_:
                     p_up = amm.p_up(n)
                     p_up_ = p_up * (1 + dfee)
@@ -91,7 +92,11 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
                     #     return p_down
                     # else:
                     return p_up - (p_up_ - p) / (p_up_ - p_down_) * (p_up - p_down)
-        return amm.get_p()  # no trades
+
+        if is_up:
+            return p * (1 - amm.dynamic_fee(amm.min_band))
+        else:
+            return p * (1 + amm.dynamic_fee(amm.max_band))
 
     for (t, o, high, low, c, vol), ema in zip(data, emas):
         amm.set_p_oracle(ema)
@@ -99,6 +104,10 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         min_price = amm.p_down(amm.min_band)
         high = find_target_price(high * (1 - EXT_FEE), is_up=True)
         low = find_target_price(low * (1 + EXT_FEE), is_up=False)
+        # high = high * (1 - EXT_FEE - fee)
+        # low = low * (1 + EXT_FEE + fee)
+        # if high > amm.get_p():
+        #     print(high, '/', high_, '/', max_price, '; ', low, '/', low_, '/', min_price)
         if high > amm.get_p():
             amm.trade_to_price(high)
         if high > max_price:

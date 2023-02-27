@@ -10,7 +10,7 @@ if __name__ == '__main__':
     losses = []
     for f in fee:
         f = float(f)
-        losses.append(get_loss_rate(range_size, f, Texp=T, measure=measure, min_loan_duration=1, max_loan_duration=1,
+        losses.append(get_loss_rate(range_size, f, Texp=T, measure=measure, min_loan_duration=.3, max_loan_duration=.3,
                                     samples=200_000, n_top_samples=20,
                                     other={'dynamic_fee_multiplier': 0, 'use_po_fee': 1, 'po_fee_delay': 1}))
         print(f, losses[-1])
