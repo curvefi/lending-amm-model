@@ -3,7 +3,7 @@ from libsimulate import get_loss_rate
 if __name__ == '__main__':
     import numpy as np
 
-    range_size = 0.039999
+    range_size = 0.1
     T = 600
     measure = 'xtopmax2'
     fee = np.logspace(np.log10(0.001), np.log10(0.015), 20)

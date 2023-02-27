@@ -3,10 +3,10 @@ from libsimulate import get_loss_rate
 if __name__ == '__main__':
     import numpy as np
 
-    range_size = 0.1
+    range_size = 0.039999
     T = 600
     measure = 'xtopmax2'
-    fee = 0.00
+    fee = 0.002
     muls = np.linspace(0, 1.99, 20)
     losses = []
     for mul in muls:

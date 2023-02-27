@@ -4,7 +4,7 @@ if __name__ == '__main__':
     import numpy as np
 
     range_size = np.linspace(0.01, 0.15, 15) - 0.00001
-    fee = 0.003
+    fee = 0.002
     duration = 0.3  # 0.3
     samples = 200000  # 20000
     losses = []
