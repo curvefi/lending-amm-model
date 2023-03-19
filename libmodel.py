@@ -3,10 +3,11 @@ from math import log, floor, sqrt
 
 
 class LendingAMM:
-    def __init__(self, p_base, A, fee=0, dynamic_fee_multiplier=1.0, use_po_fee=1, po_fee_delay=1):
+    def __init__(self, p_base, A, fee=0, dynamic_fee_multiplier=0.0, use_po_fee=1, po_fee_delay=1):
         self.p_base = p_base
         self.p_oracle = p_base
         self.prev_p_oracle = p_base
+        self.old_dfee = 0
         self.A = A
         self.bands_x = defaultdict(float)
         self.bands_y = defaultdict(float)
@@ -31,8 +32,8 @@ class LendingAMM:
 
     def set_p_oracle(self, p):
         if self.use_po_fee:
-            if len(self.oracle_history) >= self.po_fee_delay:
-                self.prev_p_oracle = self.oracle_history[-self.po_fee_delay]
+            if len(self.oracle_history) >= 1:
+                self.prev_p_oracle = self.oracle_history[-1]
             else:
                 self.prev_p_oracle = self.p_oracle
             self.oracle_history.append(p)
@@ -40,7 +41,7 @@ class LendingAMM:
             self.prev_p_oracle = p
         self.p_oracle = p
 
-    def dynamic_fee(self, n_band):
+    def dynamic_fee(self, n_band, new=True):
         p_up = self.p_up(n_band)
         p_down = self.p_down(n_band)
         diff1 = p_up - self.p_oracle
@@ -48,12 +49,14 @@ class LendingAMM:
 
         fee = self.fee
 
-        if diff1 > diff2:
-            fee = max(self.use_po_fee * 1.5 * (p_up / self.p_oracle)**2 *
-                      abs(self.prev_p_oracle - self.p_oracle) / self.p_oracle, fee)
-        else:
-            fee = max(self.use_po_fee * 1.5 * (self.p_oracle / p_down)**2 *
-                      abs(self.prev_p_oracle - self.p_oracle) / self.p_oracle, fee)
+        if self.use_po_fee:
+            if new:
+                r = min(self.prev_p_oracle, self.p_oracle) / max(self.prev_p_oracle, self.p_oracle)
+                fee = (self.old_dfee + (1 - r**3)) * (self.po_fee_delay - 1) / self.po_fee_delay
+                self.old_dfee = fee
+                fee = max(fee, self.fee)
+            else:
+                fee = max(self.old_dfee, self.fee)
 
         if self.dynamic_fee_multiplier > 0:
             if (p_down > self.p_oracle) or (p_up < self.p_oracle):

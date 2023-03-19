@@ -9,14 +9,14 @@ if __name__ == '__main__':
     samples = 100000
     n_top_samples = 20
     # n_top_samples = samples
-    T = np.logspace(np.log10(100), np.log10(5000), 30)
+    T = np.logspace(np.log10(300), np.log10(5000), 30)
     losses = []
     for t in T:
         losses.append(
             get_loss_rate(
                 range_size, fee, Texp=float(t), measure='xtopmax2',
                 min_loan_duration=days, max_loan_duration=days, samples=samples,
-                n_top_samples=n_top_samples, other={'dynamic_fee_multiplier': 0, 'use_po_fee': 1, 'po_fee_delay': 1}))
+                n_top_samples=n_top_samples, other={'dynamic_fee_multiplier': 0, 'use_po_fee': 1, 'po_fee_delay': 2}))
         print(t, losses[-1])
 
     try:

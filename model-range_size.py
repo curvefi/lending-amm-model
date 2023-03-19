@@ -13,7 +13,7 @@ if __name__ == '__main__':
         r = float(r)
         losses.append(get_loss_rate(r, fee, Texp=600, measure='xtopmax2', min_loan_duration=duration, max_loan_duration=duration,
                                     samples=samples, n_top_samples=20,
-                                    other={'dynamic_fee_multiplier': 0, 'use_po_fee': 1, 'po_fee_delay': 1}))
+                                    other={'dynamic_fee_multiplier': 0, 'use_po_fee': 1, 'po_fee_delay': 2}))
         cl = 1 - (1 - losses[-1]) * (1 - r)**0.5
         combined_losses.append(cl)
         print(r, losses[-1], cl)

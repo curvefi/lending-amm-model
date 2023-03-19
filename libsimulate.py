@@ -66,11 +66,11 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
     losses = []
     fees = []
 
-    def find_target_price(p, is_up=True):
+    def find_target_price(p, is_up=True, new=False):
         if is_up:
             for n in range(amm.max_band, amm.min_band - 1, -1):
                 p_down = amm.p_down(n)
-                dfee = amm.dynamic_fee(n)
+                dfee = amm.dynamic_fee(n, new=new)
                 p_down_ = p_down * (1 + dfee)
                 # XXX print(n, amm.min_band, amm.max_band, p_down, p, amm.get_p())
                 if p > p_down_:
@@ -83,7 +83,7 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
         else:
             for n in range(amm.min_band, amm.max_band + 1):
                 p_up = amm.p_up(n)
-                dfee = amm.dynamic_fee(n)
+                dfee = amm.dynamic_fee(n, new=new)
                 p_up_ = p_up * (1 - dfee)
                 if p < p_up_:
                     p_down = amm.p_down(n)
@@ -94,16 +94,16 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
                     return p_up - (p_up_ - p) / (p_up_ - p_down_) * (p_up - p_down)
 
         if is_up:
-            return p * (1 - amm.dynamic_fee(amm.min_band))
+            return p * (1 - amm.dynamic_fee(amm.min_band, new=False))
         else:
-            return p * (1 + amm.dynamic_fee(amm.max_band))
+            return p * (1 + amm.dynamic_fee(amm.max_band, new=False))
 
     for (t, o, high, low, c, vol), ema in zip(data, emas):
         amm.set_p_oracle(ema)
         max_price = amm.p_up(amm.max_band)
         min_price = amm.p_down(amm.min_band)
-        high = find_target_price(high * (1 - EXT_FEE), is_up=True)
-        low = find_target_price(low * (1 + EXT_FEE), is_up=False)
+        high = find_target_price(high * (1 - EXT_FEE), is_up=True, new=True)
+        low = find_target_price(low * (1 + EXT_FEE), is_up=False, new=False)
         # high = high * (1 - EXT_FEE - fee)
         # low = low * (1 + EXT_FEE + fee)
         # if high > amm.get_p():
@@ -123,7 +123,7 @@ def trader(range_size, fee, Texp, position, size, log=False, verbose=False, loss
                 assert amm.bands_x[n] == 0
                 assert amm.bands_y[n] > 0
         d = datetime.fromtimestamp(t//1000).strftime("%Y/%m/%d %H:%M")
-        fees.append(amm.dynamic_fee(amm.active_band))
+        fees.append(amm.dynamic_fee(amm.active_band, new=False))
         if log or verbose:
             if loss_style == 'y':
                 loss = amm.get_all_y() / initial_y0 * 100
