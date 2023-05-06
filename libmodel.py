@@ -208,6 +208,8 @@ class LendingAMM:
                     self.bands_x[n] = Inv / (g + y_dest) - f
                     delta_x = self.bands_x[n] - x_old
                     self.bands_x[n] += fee * delta_x
+                    dx += self.bands_x[n] - x
+                    dy += self.bands_y[n] - y
                     break
 
                 else:
@@ -227,6 +229,8 @@ class LendingAMM:
                     self.bands_y[n] = Inv / (f + x_dest) - g
                     delta_y = self.bands_y[n] - y_old
                     self.bands_y[n] += fee * delta_y
+                    dx += self.bands_x[n] - x
+                    dy += self.bands_y[n] - y
                     break
 
                 else:
