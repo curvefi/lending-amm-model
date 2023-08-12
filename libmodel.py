@@ -302,13 +302,16 @@ class LendingAMM:
             # y_o__ = max(sqrt(Inv / p_o), g) - g
             # x_o__ = max(Inv / (g + y_o__), f) - f
 
-            y_o = self.A * y0 * (1 - p_o_down / p_o)
-            x_o = self.A * y0 * p_o * (1 - p_o / p_o_up)
+            # y_o = self.A * y0 * (1 - p_o_down / p_o)
+            # x_o = self.A * y0 * p_o * (1 - p_o / p_o_up)
 
             # print('p_o =', p_o, 'p_o_up =', p_o_up, 'p_o_down =', p_o_down)
             # print('x', x_o__, '->', x_o)
             # print('y', y_o__, '->', y_o)
             # print()
+
+            y_o = self.A * y0 * (1 - p_o_down / p_o)
+            x_o = max(Inv / (g + y_o), f) - f
 
             # Now adiabatic conversion from definitely in-band
             return y_o + x_o / sqrt(p_o_up * p_o)
@@ -364,7 +367,9 @@ class LendingAMM:
             return x_o
 
         else:
-            y_o = max(sqrt(Inv / p_o), g) - g
+            # y_o = max(sqrt(Inv / p_o), g) - g
+            # x_o = max(Inv / (g + y_o), f) - f
+            y_o = self.A * y0 * (1 - p_o_down / p_o)
             x_o = max(Inv / (g + y_o), f) - f
             # Now adiabatic conversion from definitely in-band
             return x_o + y_o * sqrt(p_o_down * p_o)
