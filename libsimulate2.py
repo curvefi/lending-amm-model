@@ -53,6 +53,9 @@ class Trader:
         self.p_base = self.price_data[0][1] * (A / (A - 1) + 1e-4)
         self.amm = LendingAMM(self.p_base, A, fee, **extra_args)
 
+        self.amount_y = initial_amount
+        self.amount_x = 0
+
     def find_target_price(self, p, is_up=True, new=False):
         if is_up:
             for n in range(self.amm.max_band, self.amm.min_band - 1, -1):
@@ -84,12 +87,24 @@ class Trader:
         else:
             return p * (1 + self.amm.dynamic_fee(self.amm.max_band, new=False))
 
-    def deposit(self, amount, price_ratio, range_size):
-        p0 = self.emas[self.cursor] * price_ratio
-        self.amm.deposit_range(amount, p0 * (1 - range_size), p0)
+    def deposit(self):
+        p = self.price_data[self.cursor][1]
+        amount = self.amount_y + self.amount_x / p
+        # self.amm.p_oracle is already executed
+        self.amm.deposit_top(amount, p)
+        self.amount_x = 0
+        self.amount_y = 0
 
     def withdraw(self):
-        pass
+        x, y = self.amm.withdraw()
+        self.amount_y = 0
+        self.amount_x = x + y * self.price_data[self.cursor][1]
+
+    def current_value(self):
+        if self.amm.deposited:
+            return y * self.price_data[self.cursor][1] + x
+        else:
+            return self.amount_y * self.price_data[self.cursor][1] + self.amount_x
 
     def next_p(self, price_change_up, price_change_down):
         # Example:

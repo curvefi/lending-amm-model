@@ -17,6 +17,7 @@ class LendingAMM:
         self.use_po_fee = use_po_fee
         self.po_fee_delay = po_fee_delay
         self.oracle_history = []
+        self.deposited = False
 
     # Deposit:
     # - above active band - only in y,
@@ -102,6 +103,8 @@ class LendingAMM:
 
     def deposit_range(self, amount, p1, p2):
         assert p1 <= self.p_oracle and p2 <= self.p_oracle
+        assert not self.deposited
+
         n1 = self.get_band_n(p1)
         n2 = self.get_band_n(p2)
         n1, n2 = sorted([n1, n2])
@@ -111,6 +114,36 @@ class LendingAMM:
         for i in range(n1, n2 + 1):
             assert self.bands_x[i] == 0
             self.bands_y[i] += y
+
+        self.deposited = True
+
+    def deposit_top(self, amount, p, band_shift=0, dn=4):
+        assert not self.deposited
+        n1 = self.get_band_n(self.p_oracle) + band_shift
+        while True:
+            n1 += 1
+            if p < self.p_down(n1):
+                break
+        n2 = n1 + dn - 1
+        y = amount / dn
+        self.min_band = n1
+        self.max_band = n2
+        for i in range(n1, n2 + 1):
+            assert self.bands_x[i] == 0
+            self.bands_y[i] += y
+        self.deposited = True
+
+    def withdraw(self):
+        assert self.deposited
+        x = 0
+        y = 0
+        for i in range(self.min_band, self.max_band + 1):
+            x += self.bands_x[i]
+            y += self.bands_y[i]
+            self.bands_x[i] = 0
+            self.bands_y[i] = 0
+        self.deposited = False
+        return x, y
 
     def get_y0(self, n=None):
         A = self.A
